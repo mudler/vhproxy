@@ -1,7 +1,7 @@
 ---
 host: gargamella.it
 host_port: 3000
-redirect: m.timmyservice.it
+redirect: google.it
 redirect_port: 80
 ---
 host: golosone.it
