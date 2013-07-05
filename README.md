@@ -27,6 +27,8 @@ Every path can have other subs, so you can have more configuration files located
 Configuration files are in <i>YAML</i>, there is a self-explanatory example file under <i>config/</i>
 
 
-  
+About
+=======
 
-It's not intended to be a big software, i just use it in my own small (dev) environments to setup a proxy when i need too leveraging Mojo Hypnotoad fork capabilities, don't be afraid to open an issue or contact me by email
+It's not intended to be a big software, i just use it in my own small (dev) environments to setup a proxy whenever i need to
+(leveraging Mojo Hypnotoad fork capabilities) don't be afraid to open an issue or contact me by email.
