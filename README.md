@@ -17,8 +17,6 @@ Installation
 
  - First install cpanm. ```cpan App::cpanminus```
  - Clone the repository and run ```cpanm --installdeps .```
- - You are done.
-
     
 Configuration
 =======
