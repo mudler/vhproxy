@@ -40,4 +40,5 @@ About
 =======
 
 It's not intended to be a big software, i just use it in my own small (dev) environments to setup a proxy whenever i need to
-(leveraging Mojo Hypnotoad fork capabilities) don't be afraid to open an issue or contact me by email.
+(leveraging Mojo Hypnotoad fork capabilities).
+Don't be afraid to open an issue or contact me by email.
