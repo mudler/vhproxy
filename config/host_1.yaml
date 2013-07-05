@@ -1,0 +1,17 @@
+---
+host: gargamella.it
+host_port: 3000
+redirect: m.timmyservice.it
+redirect_port: 80
+---
+host: golosone.it
+host_port: 3000
+redirect: mozilla.org
+redirect_port: 80
+---
+#and just everywhere
+listening_port: 80
+scheme: http
+domain: * #Leave this like that
+
+

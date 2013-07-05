@@ -1,0 +1,91 @@
+#!/usr/bin/perl
+use lib './lib';
+use FindBin '$Bin';
+
+use Mojolicious::Lite;
+use YAML::Tiny;
+use Mojo::UserAgent;
+use VHProxy::IO qw($output);
+use VHProxy::Handlers::HTTP;
+
+use File::Find::Object;
+
+my $VERSION = "0.1";
+my $Hosts;
+my $yaml;
+my $Tiny   = YAML::Tiny->new;
+my $ListenPort = '8080';
+my $Scheme ="http"; #Default
+my $Domain ='*';
+my @ConfigDirs =
+    ( $ENV{'HOME'} . "/.vhproxy", $Bin . "/config", "/etc/vhproxy" );
+my $tree = File::Find::Object->new( {}, @ConfigDirs );
+$output->print_ascii("VHProxy::IO::DATA","magenta on_black bold");
+
+$output->print( "VHProxy version $VERSION started", "~~" );
+$output->print( "Importing hosts, please wait, searching for config in : "
+        . join( " ", @ConfigDirs ) );
+
+
+while ( my $r = $tree->next_obj() ) {
+    if ( $r->is_file ) {
+        $yaml = $Tiny->read( $r->path )
+            or $output->error( "Error occourred reading " . $r->path ." YAML Syntax error?");
+
+        #Importing data in my hash with an index by host (for convenience)
+        foreach my $Key ( @{$yaml} ) {
+            if(exists($Key->{listening_port})){
+                $ListenPort=$Key->{listening_port};
+            }
+
+
+            if(exists($Key->{scheme})){
+                $Scheme=$Key->{scheme};
+            }
+
+            if(exists($Key->{domain})){
+                $Domain=$Key->{domain};
+            }
+
+            if(exists($Key->{host})){
+                $output->print(
+                        "* "
+                            . $Key->{host} . ":"
+                            . $Key->{host_port} . " -> "
+                            . $Key->{redirect} . ":"
+                            . $Key->{redirect_port},
+                        "||"
+                    );
+                $Hosts->{ $Key->{host} }->{redirect}      = $Key->{redirect};
+                $Hosts->{ $Key->{host} }->{redirect_port} = $Key->{redirect_port};
+                $Hosts->{ $Key->{host} }->{host_port}     = $Key->{host_port};
+            }
+        }
+
+    }
+}
+
+app->config(hypnotoad => {listen => [$Scheme.'://'.$Domain.':'.$ListenPort]});
+
+my $HTTPHandler=VHProxy::Handlers::HTTP->new(
+			{Hosts => $Hosts});
+#I haven't tryed yet, but i think its supports ssl too, because it's based on Mojo::Transaction::HTTP that supports that schema
+#maybe will work out of the box? :)
+
+
+$output->print(
+    "a total of " . scalar( keys( %{$Hosts} ) ) . " hosts were found" );
+
+if ( scalar( keys( %{$Hosts} ) ) <= 0 ) {
+    $output->error("No hosts found");
+    exit 0;
+    app->exit;
+}
+
+any '*' => sub { my $self = shift; $HTTPHandler->proxy($self) };
+any '/' => sub { my $self = shift; $HTTPHandler->proxy($self) };
+
+
+
+app->start;
+
