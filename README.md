@@ -5,7 +5,7 @@ This is a <i>Virtual Name Proxy </i>written in Perl using the Mojolicious Framew
 
 What it does
 =======
-Handles HTTP(S ?) request on a given port and forward each request to the host supplied.
+Reads Yaml files that contains instructions on redirect and handles HTTP(S ?) request on a given port and forward each request to the configured host .
 Every request it's logged in the vhproxy.log file
 
 Useful in a situation where you have 20 or 30 mojo (lite, i hope) apps running in more VMs or ports where you couldn't use lighttpd,apache, nginx...
