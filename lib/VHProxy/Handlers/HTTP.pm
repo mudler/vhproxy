@@ -1,80 +1,30 @@
 package VHProxy::Handlers::HTTP;
 use VHProxy::IO qw($output);
+use Mojo::UserAgent::CookieJar;
 use Time::HiRes qw(usleep ualarm gettimeofday tv_interval);
-sub new {
-	my $self=shift;
-bless ({},$self);
-$self->{'Hosts'}=shift->{'Hosts'};
 
-return $self;
+sub new {
+    my $package = shift;
+    bless( {}, $package );
+    %{$package} = @_;
+
+    return $package;
 
 }
 
 sub proxy {
-        use Data::Dumper;
-
     my $request_arrival_time = [gettimeofday];
-    my $Class = shift;
-    my $self=shift;
-    my $Hosts = $Class->{'Hosts'};
+    my $Class                = shift;
+    my $self                 = shift;
+    my $Hosts                = $Class->{'Hosts'};
     $self->render_later;
 
-    my $Requested =
-        $self->tx->req->content->headers->host;    #Requested by client
-    my $RequestedURL    = $self->tx->req->url;
-    my $requestedhost   = $self->tx->req->url->base->host();
-    my $requestedport   = $self->tx->req->url->base->port();
-    my $requestedmethod = $self->tx->req->method();
-    $output->notice( "[NOTICE] "
-            . $self->tx->remote_address . " "
-            . $requestedmethod . " "
-            . $requestedhost . ":"
-            . $requestedport );
-    $output->print("Got a request for $requestedhost ");
-
-    if (exists( $Hosts->{$requestedhost} )
+    if (exists( $Hosts->{ $self->tx->req->url->base->host() } )
 
         #and $Hosts->{$requestedhost}->{host_port} eq $requestedport
         )
     {
-        $output->print("Building the Transaction");
-
-        ##TRANSACTION##
-        my $ua = Mojo::UserAgent->new;
-
-   #Building the query that was submitted by the user and returning the output
-        my $tx =
-            $ua->build_tx(
-            $requestedmethod => $Hosts->{$requestedhost}->{redirect} );
-        $output->print( "Redirecting to : "
-                . $Hosts->{$requestedhost}->{redirect} . ":"
-                . $Hosts->{$requestedhost}->{redirect_port} );
-
-     #$tx->req->content->headers->host($Hosts->{$r1equestedhost}->{redirect});
-        $tx->req->url->base->host( $Hosts->{$requestedhost}->{redirect} );
-        $tx->req->url->base->port(
-            $Hosts->{$requestedhost}->{redirect_port} );
-        $tx->req->url->{"query"}    = $self->tx->req->url->query;
-        $tx->req->{"cookies"}    = $self->tx->req->cookies;
-#        $tx->req->{"content"}    = $self->tx->content;
-#        $tx->req->{'content'}->{"headers"}->{"headers"}->{"host"}= [$requestedhost.":".$requestedport];
-
-        $tx->req->url->{"path"}     = $self->tx->req->url->path;
-        $tx->req->url->{"fragment"} = $self->tx->req->url->fragment;
-
-   
-       # $output->print("The request is ".Dumper($tx));
-        my $res =
-            $ua->inactivity_timeout(20)->max_redirects(5)
-            ->connect_timeout(20)->request_timeout(10)->start($tx)
-            ;    # Sending the request
-
-        ##RENDERING THE OUTPUT
-        if($res){
-            $self->render( text => $res->res->body );
-        } else {
-            $output->error("Something went wrong when processing the request: response empty");
-        }
+        $Class->_forge_request($self);
     }
     else {
         my $Requested =
@@ -83,15 +33,99 @@ sub proxy {
         my $requestedport   = $self->tx->req->url->base->port();
         my $requestedmethod = $self->tx->req->method();
         $output->error(
-                  "[Error] someone requested something it's not configured: "
+                  "Someone requested something it's not configured: "
                 . $self->tx->remote_address . " "
                 . $requestedmethod . " "
                 . $requestedhost . ":"
                 . $requestedport );
+        $self->app->render_exception('Your request is soooo wrong!');
     }
-    my $elapsed = tv_interval ($request_arrival_time, [gettimeofday]);
 
-    $output->print("Elapsed time for request ".$self->tx->remote_address." :".$elapsed."s");
+    my $elapsed = tv_interval( $request_arrival_time, [gettimeofday] );
+
+    $output->print( "Elapsed time for request "
+            . $self->tx->remote_address . " :"
+            . $elapsed
+            . "s" );
+}
+
+sub _forge_request {
+    my $Class = shift;
+    my $self  = shift;
+    my $jar   = Mojo::UserAgent::CookieJar->new;
+
+    my $Hosts = $Class->{'Hosts'};
+
+    my $Requested =
+        $self->tx->req->content->headers->host;    #Requested by client
+    my $RequestedURL     = $self->tx->req->url;
+    my $RequestedURLPath = $self->tx->req->url->path;
+
+    my $requestedhost   = $self->tx->req->url->base->host();
+    my $requestedport   = $self->tx->req->url->base->port();
+    my $requestedmethod = $self->tx->req->method();
+    $output->notice( $self->tx->remote_address . " "
+            . $requestedmethod . " "
+            . $requestedhost . ":"
+            . $requestedport );
+
+    #Start forging
+
+    #my $tx= $self->ua->build_tx( $requestedmethod => $requestedhost);
+    #$tx->req($self->tx->req->clone());
+    my $tx = Mojo::Transaction::HTTP->new;
+    $tx->req( $self->tx->req->clone() )
+        ;    #this is better, we keep also the same request
+
+    # $output->DEBUG("Cookie ".Dumper($self->tx->req));
+    # foreach my $c( keys %{$self->tx->req->{"cookies"}})
+    # {
+    #   #  $Cookies.=$self->tx->req->{"cookies"}->{$c}[0]->to_string."; ";
+
+    #     $tx->req->cookies($self->tx->req->{"cookies"}->{$c}[0]);
+    # }
+    #$tx->req->headers->cookie($Cookies);
+
+    #$tx->req->{'content'} = $self->tx->req->{'content'};
+
+    $tx->req->url->parse( $Class->{'Scheme'} . "://"
+            . $Hosts->{$requestedhost}->{redirect} . ":"
+            . $Hosts->{$requestedhost}->{redirect_port}
+            );
+    $tx->req->url->path($RequestedURLPath);
+    $tx->req->url->query( $self->tx->req->params );
+    my $res =
+        $self->ua->inactivity_timeout(20)->max_redirects(5)
+        ->connect_timeout(20)->request_timeout(10)->start(
+        $tx
+
+#i had to comment the async task because on code 401 we got nothing than error (no prompt for password auth)
+#,
+#             sub {  my ($ua, $tx) = @_;
+#    if ($tx->res->error) {
+#                 $output->error("Something went wrong when processing the request: ".join(" ",@{$tx->res->{'error'}}));
+
+            #         }else {
+            #             $output->debug("Transaction: ".Dumper($tx));
+
+            #                       $self->tx->res($tx->res);
+            #                    $self->rendered;
+            #         }
+
+         #               #$output->print("The build request is ".Dumper($tx));
+
+            # }
+        );
+    if ( $tx->res->error ) {
+        $output->error( "Something went wrong when processing the request: "
+                . join( " ", @{ $tx->res->{'error'} } ) );
+
+    }
+
+        $self->tx->res( $tx->res );
+        $self->rendered;
+    
+
 }
 
 1;
