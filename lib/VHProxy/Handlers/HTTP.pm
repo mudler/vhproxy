@@ -1,6 +1,5 @@
 package VHProxy::Handlers::HTTP;
 use VHProxy::IO qw($output);
-use Mojo::UserAgent::CookieJar;
 use Time::HiRes qw(usleep ualarm gettimeofday tv_interval);
 
 sub new {
@@ -52,7 +51,6 @@ sub proxy {
 sub _forge_request {
     my $Class = shift;
     my $self  = shift;
-    my $jar   = Mojo::UserAgent::CookieJar->new;
 
     my $Hosts = $Class->{'Hosts'};
 
