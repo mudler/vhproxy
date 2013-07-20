@@ -25,7 +25,7 @@ VHProxy will look for configuration files in <i>$HOME/.vhproxy</i>, <i>/etc/vhpr
 Every path can have other subs, so you can have more configuration files located on more directories.
 
 Configuration files are in <i>YAML</i>, there is a self-explanatory example file under <i>config/</i>
-
+See the [Configuration Page](https://github.com/mudler/vhproxy/wiki/Configuration) for help.
 
 Usage
 =======
