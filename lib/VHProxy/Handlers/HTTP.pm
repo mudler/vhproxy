@@ -38,7 +38,7 @@ sub proxy {
                 . $requestedmethod . " "
                 . $requestedhost . ":"
                 . $requestedport );
-        $self->app->render_exception('Your request is soooo wrong!');
+       return $self->render_exception('Your request is soooo wrong!');
     }
 
     my $elapsed = tv_interval( $request_arrival_time, [gettimeofday] );
